@@ -16,6 +16,7 @@ export default {
         width: 1600,
         height: 1600,
         quality: 80,
+        headers: [],
         uploadHandler(responseText){
             const json = JSON.parse(responseText)
             return json.ok ? json.data : null

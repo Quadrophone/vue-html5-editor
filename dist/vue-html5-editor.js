@@ -1,7 +1,7 @@
 /**
  * Vue-html5-editor 1.0.2
  * https://github.com/PeakTai/vue-html5-editor
- * build at Tue Mar 14 2017 18:41:09 GMT+0800 (CST)
+ * build at Mon Mar 27 2017 19:41:10 GMT-0700 (Pacific Daylight Time)
  */
 
 (function (global, factory) {
@@ -438,6 +438,15 @@ var dashboard$3 = {
             };
 
             xhr.open('POST', config.server);
+          
+            var headers = config.headers;
+
+            for (var header in headers){
+                if (headers.hasOwnProperty(header)) {
+                    xhr.setRequestHeader(header, headers[header]);                     
+                }
+            }
+
             xhr.send(formData);
         }
     }
@@ -459,6 +468,7 @@ var image = {
         width: 1600,
         height: 1600,
         quality: 80,
+        headers: [],
         uploadHandler: function uploadHandler(responseText){
             var json = JSON.parse(responseText);
             return json.ok ? json.data : null

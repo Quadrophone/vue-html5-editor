@@ -127,6 +127,15 @@ export default {
             }
 
             xhr.open('POST', config.server)
+          
+            var headers = config.headers;
+
+            for (var header in headers){
+                if (headers.hasOwnProperty(header)) {
+                    xhr.setRequestHeader(header, headers[header]);                     
+                }
+            }
+
             xhr.send(formData)
         }
     }
