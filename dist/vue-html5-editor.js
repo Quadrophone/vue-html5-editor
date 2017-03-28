@@ -1,7 +1,7 @@
 /**
  * Vue-html5-editor 1.0.2
  * https://github.com/PeakTai/vue-html5-editor
- * build at Mon Mar 27 2017 19:41:10 GMT-0700 (Pacific Daylight Time)
+ * build at Mon Mar 27 2017 19:52:51 GMT-0700 (Pacific Daylight Time)
  */
 
 (function (global, factory) {
@@ -441,11 +441,11 @@ var dashboard$3 = {
           
             var headers = config.headers;
 
-            for (var header in headers){
-                if (headers.hasOwnProperty(header)) {
-                    xhr.setRequestHeader(header, headers[header]);                     
-                }
-            }
+            headers.forEach(function(header) {
+                var headerName = Object.keys(header); 
+                var headerValue = header[headerName];
+                xhr.setRequestHeader(headerName, headerValue);                     
+            });
 
             xhr.send(formData);
         }

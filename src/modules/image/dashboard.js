@@ -130,11 +130,11 @@ export default {
           
             var headers = config.headers;
 
-            for (var header in headers){
-                if (headers.hasOwnProperty(header)) {
-                    xhr.setRequestHeader(header, headers[header]);                     
-                }
-            }
+            headers.forEach(function(header) {
+                var headerName = Object.keys(header); 
+                var headerValue = header[headerName];
+                xhr.setRequestHeader(headerName, headerValue);                     
+            });
 
             xhr.send(formData)
         }
