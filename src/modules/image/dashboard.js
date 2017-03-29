@@ -19,7 +19,7 @@ export default {
         }
     },
     methods: {
-        reset(){
+        reset() {
             this.upload.status = 'ready'
         },
         insertImageUrl() {
@@ -32,7 +32,7 @@ export default {
         pick() {
             this.$refs.file.click()
         },
-        setUploadError(msg){
+        setUploadError(msg) {
             this.upload.status = 'error'
             this.upload.errorMsg = msg
         },
@@ -41,6 +41,7 @@ export default {
             const config = this.$options.module.config
 
             const file = this.$refs.file.files[0]
+
             if (file.size > config.sizeLimit) {
                 this.setUploadError(this.$parent.locale['exceed size limit'])
                 return
@@ -77,67 +78,103 @@ export default {
             }
             // 上传服务器
             component.uploadToServer(file)
+
         },
         insertBase64(data) {
             this.$parent.execCommand(Command.INSERT_IMAGE, data)
         },
-        uploadToServer(file) {
+        awsSignature(file) {
+            console.log(file);
             const config = this.$options.module.config
-            const formData = new FormData()
-            formData.append(config.fieldName, file)
+            return new Promise(function(resolve, reject) {
+                const xhr = new XMLHttpRequest()
 
-            const xhr = new XMLHttpRequest()
-
-            xhr.onprogress = (e) => {
-                console.log(e);
-                this.upload.status = 'progress'
-                if (e.lengthComputable) {
-                    this.upload.progressComputable = true
-                    const percentComplete = e.loaded / e.total
-                    this.upload.complete = (percentComplete * 100).toFixed(2)
-                } else {
-                    this.upload.progressComputable = false
-                }
-            }
-
-            xhr.onload = () => {
-                if (xhr.status !== 200) {
-                    this.setUploadError(`request error,code ${xhr.status}`)
-                    return
+                xhr.onload = () => {
+                    console.log(xhr.responseText);
+                    resolve(xhr.responseText)
                 }
 
-                try {
-                    const url = config.uploadHandler(xhr.responseText)
-                    if (url) {
-                        this.$parent.execCommand(Command.INSERT_IMAGE, url)
-                    }
-                } catch (err) {
-                    this.setUploadError(err.toString())
-                } finally {
-                    this.upload.status = 'ready'
-                }
-            }
+                xhr.open('GET', config.awsSignatureUrl + '&filename=' + file.name)
 
-            xhr.onerror = () => {
-                // find network info in brower tools
-                this.setUploadError('request error')
-            }
+                var headers = config.headers;
 
-            xhr.onabort = () => {
-                this.upload.status = 'abort'
-            }
+                headers.forEach(function(header) {
+                    var headerName = Object.keys(header);
+                    var headerValue = header[headerName];
+                    xhr.setRequestHeader(headerName, headerValue);
+                });
 
-            xhr.open('POST', config.server)
-          
-            var headers = config.headers;
-
-            headers.forEach(function(header) {
-                var headerName = Object.keys(header); 
-                var headerValue = header[headerName];
-                xhr.setRequestHeader(headerName, headerValue);                     
+                xhr.send()
             });
 
-            xhr.send(formData)
+        },
+        uploadToServer(file) {
+            const component = this
+
+            component.awsSignature(file).then(function(signature) {
+                signature = JSON.parse(signature)
+                console.log(signature);
+                const config = component.$options.module.config
+                const formData = new FormData()
+
+                formData.append('key', file.name)
+                formData.append('acl', signature.params.acl)
+                formData.append('success_action_status', '201')
+                formData.append('policy', signature.params.policy)
+                formData.append('x-amz-credential', signature.params['x-amz-credential'])                
+                formData.append('x-amz-algorithm', signature.params['x-amz-algorithm'])                
+                formData.append('x-amz-date', signature.params['x-amz-date'])                
+                formData.append('x-amz-signature', signature.params['x-amz-signature'])
+                formData.append('file', file)
+
+              
+                const xhr = new XMLHttpRequest()
+
+                xhr.upload.onprogress = (e) => {
+                    console.log(e);
+                    component.upload.status = 'progress'
+                    if (e.lengthComputable) {
+                        component.upload.progressComputable = true
+                        const percentComplete = e.loaded / e.total
+                        component.upload.complete = (percentComplete * 100).toFixed(2)
+                    } else {
+                        component.upload.progressComputable = false
+                    }
+                }
+
+                xhr.onload = () => {       
+
+                    if (xhr.status != 201) {
+                        component.setUploadError(`request error,code ${xhr.status}`)
+                        return
+                    }
+                    try {
+                        const url = config.uploadHandler(xhr.responseText)
+                        if (url) {
+                            component.$parent.execCommand(Command.INSERT_IMAGE, url)
+                        }
+                    } catch (err) {
+                        component.setUploadError(err.toString())
+                    } finally {
+                        component.upload.status = 'ready'
+                    }
+                }
+
+                xhr.onerror = () => {
+                    // find network info in brower tools
+                    component.setUploadError('request error')
+                }
+
+                xhr.onabort = () => {
+                    component.upload.status = 'abort'
+                }
+
+                xhr.open('POST', config.server)
+           
+
+                xhr.send(formData)
+            })
+
         }
     }
 }

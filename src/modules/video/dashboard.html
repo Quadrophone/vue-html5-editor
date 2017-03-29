@@ -6,9 +6,8 @@
                accept="video/mp4,video/wmv">
         <button type="button" @click="pick">{{$parent.locale.upload}}</button>
     </div>
-
-    <div>PORGRESS
-        {{$parent.locale.progress}}:{{upload.progressComputable ? $parent.locale.unknown : upload.complete}}
+    <div v-if="upload.status=='progress'">
+        {{$parent.locale.progress}}:{{upload.complete}}
     </div>
 
     <div v-if="upload.status=='success'">

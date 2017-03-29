@@ -246,6 +246,7 @@ export default class RangeHandler {
                 break
             }
             case Command.INSERT_VIDEO: {
+                console.log(arg);
                 document.execCommand(Command.INSERT_VIDEO, false, arg)
                 break
             }

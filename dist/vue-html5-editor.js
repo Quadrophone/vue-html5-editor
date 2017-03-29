@@ -1,7 +1,7 @@
 /**
  * Vue-html5-editor 1.0.2
  * https://github.com/PeakTai/vue-html5-editor
- * build at Tue Mar 28 2017 17:12:11 GMT-0700 (Pacific Daylight Time)
+ * build at Tue Mar 28 2017 23:47:44 GMT-0700 (Pacific Daylight Time)
  */
 
 (function (global, factory) {
@@ -309,7 +309,7 @@ e.exports=window.lrz;}])});
 
 });
 
-var template$3 = "<div> <div v-show=\"upload.status=='ready'\"> <input type=\"text\" v-model=\"imageUrl\" maxlength=\"255\" :placeholder=\"$parent.locale['please enter a url']\"> <button type=\"button\" @click=\"insertImageUrl\">{{$parent.locale.save}}</button> <input type=\"file\" ref=\"file\" style=\"display: none !important\" @change=\"startUpload\" accept=\"image/png,image/jpeg,image/gif,image/jpg\"> <button type=\"button\" @click=\"pick\">{{$parent.locale.upload}}</button> </div> <div v-if=\"upload.status=='progress'\"> {{$parent.locale.progress}}:{{upload.progressComputable ? $parent.locale.unknown : upload.complete}} </div> <div v-if=\"upload.status=='success'\"> {{$parent.locale[\"please wait\"]}}... </div> <div v-if=\"upload.status=='error'\"> {{$parent.locale.error}}:{{upload.errorMsg}} <button type=\"button\" @click=\"reset\">{{$parent.locale.reset}}</button> </div> <div v-if=\"upload.status=='abort'\"> {{$parent.locale.upload}}&nbsp;{{$parent.locale.abort}}, <button type=\"button\" @click=\"reset\">{{$parent.locale.reset}}</button> </div> </div> ";
+var template$3 = "<div> <div v-show=\"upload.status=='ready'\"> <input type=\"text\" v-model=\"imageUrl\" maxlength=\"255\" :placeholder=\"$parent.locale['please enter a url']\"> <button type=\"button\" @click=\"insertImageUrl\">{{$parent.locale.save}}</button> <input type=\"file\" ref=\"file\" style=\"display: none !important\" @change=\"startUpload\" accept=\"image/png,image/jpeg,image/gif,image/jpg\"> <button type=\"button\" @click=\"pick\">{{$parent.locale.upload}}</button> </div> <div v-if=\"upload.status=='progress'\"> {{$parent.locale.progress}}:{{upload.complete}} </div> <div v-if=\"upload.status=='success'\"> {{$parent.locale[\"please wait\"]}}... </div> <div v-if=\"upload.status=='error'\"> {{$parent.locale.error}}:{{upload.errorMsg}} <button type=\"button\" @click=\"reset\">{{$parent.locale.reset}}</button> </div> <div v-if=\"upload.status=='abort'\"> {{$parent.locale.upload}}&nbsp;{{$parent.locale.abort}}, <button type=\"button\" @click=\"reset\">{{$parent.locale.reset}}</button> </div> </div> ";
 
 /**
  * Created by peak on 2017/2/10.
@@ -328,7 +328,7 @@ var dashboard$3 = {
         }
     },
     methods: {
-        reset: function reset(){
+        reset: function reset() {
             this.upload.status = 'ready';
         },
         insertImageUrl: function insertImageUrl() {
@@ -341,7 +341,7 @@ var dashboard$3 = {
         pick: function pick() {
             this.$refs.file.click();
         },
-        setUploadError: function setUploadError(msg){
+        setUploadError: function setUploadError(msg) {
             this.upload.status = 'error';
             this.upload.errorMsg = msg;
         },
@@ -352,6 +352,7 @@ var dashboard$3 = {
             var config = this.$options.module.config;
 
             var file = this.$refs.file.files[0];
+
             if (file.size > config.sizeLimit) {
                 this.setUploadError(this.$parent.locale['exceed size limit']);
                 return
@@ -388,69 +389,103 @@ var dashboard$3 = {
             }
             // 上传服务器
             component.uploadToServer(file);
+
         },
         insertBase64: function insertBase64(data) {
             this.$parent.execCommand(Command.INSERT_IMAGE, data);
         },
-        uploadToServer: function uploadToServer(file) {
-            var this$1 = this;
-
+        awsSignature: function awsSignature(file) {
+            console.log(file);
             var config = this.$options.module.config;
-            var formData = new FormData();
-            formData.append(config.fieldName, file);
+            return new Promise(function(resolve, reject) {
+                var xhr = new XMLHttpRequest();
 
-            var xhr = new XMLHttpRequest();
+                xhr.onload = function () {
+                    console.log(xhr.responseText);
+                    resolve(xhr.responseText);
+                };
 
-            xhr.onprogress = function (e) {
-                console.log(e);
-                this$1.upload.status = 'progress';
-                if (e.lengthComputable) {
-                    this$1.upload.progressComputable = true;
-                    var percentComplete = e.loaded / e.total;
-                    this$1.upload.complete = (percentComplete * 100).toFixed(2);
-                } else {
-                    this$1.upload.progressComputable = false;
-                }
-            };
+                xhr.open('GET', config.awsSignatureUrl + '&filename=' + file.name);
 
-            xhr.onload = function () {
-                if (xhr.status !== 200) {
-                    this$1.setUploadError(("request error,code " + (xhr.status)));
-                    return
-                }
+                var headers = config.headers;
 
-                try {
-                    var url = config.uploadHandler(xhr.responseText);
-                    if (url) {
-                        this$1.$parent.execCommand(Command.INSERT_IMAGE, url);
-                    }
-                } catch (err) {
-                    this$1.setUploadError(err.toString());
-                } finally {
-                    this$1.upload.status = 'ready';
-                }
-            };
+                headers.forEach(function(header) {
+                    var headerName = Object.keys(header);
+                    var headerValue = header[headerName];
+                    xhr.setRequestHeader(headerName, headerValue);
+                });
 
-            xhr.onerror = function () {
-                // find network info in brower tools
-                this$1.setUploadError('request error');
-            };
-
-            xhr.onabort = function () {
-                this$1.upload.status = 'abort';
-            };
-
-            xhr.open('POST', config.server);
-          
-            var headers = config.headers;
-
-            headers.forEach(function(header) {
-                var headerName = Object.keys(header); 
-                var headerValue = header[headerName];
-                xhr.setRequestHeader(headerName, headerValue);                     
+                xhr.send();
             });
 
-            xhr.send(formData);
+        },
+        uploadToServer: function uploadToServer(file) {
+            var component = this;
+
+            component.awsSignature(file).then(function(signature) {
+                signature = JSON.parse(signature);
+                console.log(signature);
+                var config = component.$options.module.config;
+                var formData = new FormData();
+
+                formData.append('key', file.name);
+                formData.append('acl', signature.params.acl);
+                formData.append('success_action_status', '201');
+                formData.append('policy', signature.params.policy);
+                formData.append('x-amz-credential', signature.params['x-amz-credential']);                
+                formData.append('x-amz-algorithm', signature.params['x-amz-algorithm']);                
+                formData.append('x-amz-date', signature.params['x-amz-date']);                
+                formData.append('x-amz-signature', signature.params['x-amz-signature']);
+                formData.append('file', file);
+
+              
+                var xhr = new XMLHttpRequest();
+
+                xhr.upload.onprogress = function (e) {
+                    console.log(e);
+                    component.upload.status = 'progress';
+                    if (e.lengthComputable) {
+                        component.upload.progressComputable = true;
+                        var percentComplete = e.loaded / e.total;
+                        component.upload.complete = (percentComplete * 100).toFixed(2);
+                    } else {
+                        component.upload.progressComputable = false;
+                    }
+                };
+
+                xhr.onload = function () {       
+
+                    if (xhr.status != 201) {
+                        component.setUploadError(("request error,code " + (xhr.status)));
+                        return
+                    }
+                    try {
+                        var url = config.uploadHandler(xhr.responseText);
+                        if (url) {
+                            component.$parent.execCommand(Command.INSERT_IMAGE, url);
+                        }
+                    } catch (err) {
+                        component.setUploadError(err.toString());
+                    } finally {
+                        component.upload.status = 'ready';
+                    }
+                };
+
+                xhr.onerror = function () {
+                    // find network info in brower tools
+                    component.setUploadError('request error');
+                };
+
+                xhr.onabort = function () {
+                    component.upload.status = 'abort';
+                };
+
+                xhr.open('POST', config.server);
+           
+
+                xhr.send(formData);
+            });
+
         }
     }
 };
@@ -480,7 +515,7 @@ var image = {
     dashboard: dashboard$3
 };
 
-var template$4 = "<div> <div v-show=\"upload.status=='ready'\"> <input type=\"file\" ref=\"file\" style=\"display: none !important\" @change=\"startUpload\" accept=\"video/mp4,video/wmv\"> <button type=\"button\" @click=\"pick\">{{$parent.locale.upload}}</button> </div> <div>PORGRESS {{$parent.locale.progress}}:{{upload.progressComputable ? $parent.locale.unknown : upload.complete}} </div> <div v-if=\"upload.status=='success'\"> {{$parent.locale[\"please wait\"]}}... </div> <div v-if=\"upload.status=='error'\"> {{$parent.locale.error}}:{{upload.errorMsg}} <button type=\"button\" @click=\"reset\">{{$parent.locale.reset}}</button> </div> <div v-if=\"upload.status=='abort'\"> {{$parent.locale.upload}}&nbsp;{{$parent.locale.abort}}, <button type=\"button\" @click=\"reset\">{{$parent.locale.reset}}</button> </div> </div> ";
+var template$4 = "<div> <div v-show=\"upload.status=='ready'\"> <input type=\"file\" ref=\"file\" style=\"display: none !important\" @change=\"startUpload\" accept=\"video/mp4,video/wmv\"> <button type=\"button\" @click=\"pick\">{{$parent.locale.upload}}</button> </div> <div v-if=\"upload.status=='progress'\"> {{$parent.locale.progress}}:{{upload.complete}} </div> <div v-if=\"upload.status=='success'\"> {{$parent.locale[\"please wait\"]}}... </div> <div v-if=\"upload.status=='error'\"> {{$parent.locale.error}}:{{upload.errorMsg}} <button type=\"button\" @click=\"reset\">{{$parent.locale.reset}}</button> </div> <div v-if=\"upload.status=='abort'\"> {{$parent.locale.upload}}&nbsp;{{$parent.locale.abort}}, <button type=\"button\" @click=\"reset\">{{$parent.locale.reset}}</button> </div> </div> ";
 
 /**
  * Created by peak on 2017/2/10.
@@ -499,13 +534,13 @@ var dashboard$4 = {
         }
     },
     methods: {
-        reset: function reset(){
+        reset: function reset() {
             this.upload.status = 'ready';
         },
         pick: function pick() {
             this.$refs.file.click();
         },
-        setUploadError: function setUploadError(msg){
+        setUploadError: function setUploadError(msg) {
             this.upload.status = 'error';
             this.upload.errorMsg = msg;
         },
@@ -523,68 +558,99 @@ var dashboard$4 = {
             // 上传服务器
             component.uploadToServer(file);
         },
-        uploadToServer: function uploadToServer(file) {
-            var this$1 = this;
-
+        awsSignature: function awsSignature(file) {
+            console.log(file);
             var config = this.$options.module.config;
-            var formData = new FormData();
-            formData.append(config.fieldName, file);
+            return new Promise(function(resolve, reject) {
+                var xhr = new XMLHttpRequest();
 
-            var xhr = new XMLHttpRequest();
-            console.log('UPLOADING');
-            xhr.onprogress = function (e) {
-                console.log(e);
-                this$1.upload.status = 'progress';
-                if (e.lengthComputable) {
-                    this$1.upload.progressComputable = true;
-                    var percentComplete = e.loaded / e.total;
-                    this$1.upload.complete = (percentComplete * 100).toFixed(2);
-                } else {
-                    this$1.upload.progressComputable = false;
-                }
-            };
+                xhr.onload = function () {
+                    console.log(xhr.responseText);
+                    resolve(xhr.responseText);
+                };
 
-            xhr.onload = function () {
-                if (xhr.status !== 200) {
-                    this$1.setUploadError(("request error,code " + (xhr.status)));
-                    return
-                }
+                xhr.open('GET', config.awsSignatureUrl + '&filename=' + file.name);
 
-                try {
-                    var url = config.uploadHandler(xhr.responseText);
-                    if (url) {
-                        var video = '<video controls>';
-                        video += '<source src="' + url + '" type="video/' + url.split('.').pop() + '">';
-                        video += '</video>'; 
-                        this$1.$parent.execCommand(Command.INSERT_VIDEO, video);
-                    }
-                } catch (err) {
-                    this$1.setUploadError(err.toString());
-                } finally {
-                    this$1.upload.status = 'ready';
-                }
-            };
+                var headers = config.headers;
 
-            xhr.onerror = function () {
-                // find network info in brower tools
-                this$1.setUploadError('request error');
-            };
+                headers.forEach(function(header) {
+                    var headerName = Object.keys(header);
+                    var headerValue = header[headerName];
+                    xhr.setRequestHeader(headerName, headerValue);
+                });
 
-            xhr.onabort = function () {
-                this$1.upload.status = 'abort';
-            };
-
-            xhr.open('POST', config.server);
-          
-            var headers = config.headers;
-
-            headers.forEach(function(header) {
-                var headerName = Object.keys(header); 
-                var headerValue = header[headerName];
-                xhr.setRequestHeader(headerName, headerValue);                     
+                xhr.send();
             });
 
-            xhr.send(formData);
+        },
+        uploadToServer: function uploadToServer(file) {
+            var component = this;
+
+            component.awsSignature(file).then(function(signature) {
+                signature = JSON.parse(signature);
+                var config = component.$options.module.config;
+                var formData = new FormData();
+
+                formData.append('key', file.name);
+                formData.append('acl', signature.params.acl);
+                formData.append('success_action_status', '201');
+                formData.append('policy', signature.params.policy);
+                formData.append('x-amz-credential', signature.params['x-amz-credential']);
+                formData.append('x-amz-algorithm', signature.params['x-amz-algorithm']);
+                formData.append('x-amz-date', signature.params['x-amz-date']);
+                formData.append('x-amz-signature', signature.params['x-amz-signature']);
+                formData.append('file', file);
+
+                var xhr = new XMLHttpRequest();
+
+                xhr.upload.onprogress = function (e) {
+                    component.upload.status = 'progress';
+                    if (e.lengthComputable) {
+                        component.upload.progressComputable = true;
+                        var percentComplete = e.loaded / e.total;
+                        component.upload.complete = (percentComplete * 100).toFixed(2);
+                    } else {
+                        component.upload.progressComputable = false;
+                    }
+                };
+
+                xhr.onload = function () {
+
+                    if (xhr.status != 201) {
+                        component.setUploadError(("request error,code " + (xhr.status)));
+                        return
+                    }
+                    try {
+                        var url = config.uploadHandler(xhr.responseText);
+                        if (url) {
+                            var video = '<video controls>';
+                            video += '<source src="' + url + '" type="video/' + url.split('.').pop() + '">';
+                            video += '</video>'; 
+                            console.log(url);
+                            component.$parent.execCommand(Command.INSERT_VIDEO, video);
+                        }
+                    } catch (err) {
+                        component.setUploadError(err.toString());
+                    } finally {
+                        component.upload.status = 'ready';
+                    }
+                };
+
+                xhr.onerror = function () {
+                    // find network info in brower tools
+                    component.setUploadError('request error');
+                };
+
+                xhr.onabort = function () {
+                    component.upload.status = 'abort';
+                };
+
+                xhr.open('POST', config.server);
+
+
+                xhr.send(formData);
+            });
+
         }
     }
 };
@@ -1179,6 +1245,7 @@ RangeHandler.prototype.execCommand = function execCommand (command, arg) {
             break
         }
         case Command.INSERT_VIDEO: {
+            console.log(arg);
             document.execCommand(Command.INSERT_VIDEO, false, arg);
             break
         }
