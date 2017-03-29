@@ -245,6 +245,10 @@ export default class RangeHandler {
                 document.execCommand(Command.INSERT_IMAGE, false, arg)
                 break
             }
+            case Command.INSERT_VIDEO: {
+                document.execCommand(Command.INSERT_VIDEO, false, arg)
+                break
+            }
             case Command.CREATE_LINK: {
                 document.execCommand(Command.CREATE_LINK, false, arg)
                 break

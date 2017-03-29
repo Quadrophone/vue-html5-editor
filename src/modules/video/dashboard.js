@@ -22,13 +22,6 @@ export default {
         reset(){
             this.upload.status = 'ready'
         },
-        insertImageUrl() {
-            if (!this.imageUrl) {
-                return
-            }
-            this.$parent.execCommand(Command.INSERT_IMAGE, this.imageUrl)
-            this.imageUrl = null
-        },
         pick() {
             this.$refs.file.click()
         },
@@ -39,7 +32,7 @@ export default {
         startUpload() {
             const component = this
             const config = this.$options.module.config
-
+            console.log(config);
             const file = this.$refs.file.files[0]
             if (file.size > config.sizeLimit) {
                 this.setUploadError(this.$parent.locale['exceed size limit'])
@@ -47,39 +40,8 @@ export default {
             }
             this.$refs.file.value = null
 
-            // 需要压缩
-            if (config.compress) {
-                lrz(file, {
-                    width: config.width,
-                    height: config.height,
-                    quality: config.quality,
-                    fieldName: config.fieldName
-                }).then((rst) => {
-                    if (config.server) {
-                        component.uploadToServer(rst.file)
-                    } else {
-                        component.insertBase64(rst.base64)
-                    }
-                }).catch((err) => {
-                    this.setUploadError(err.toString())
-                })
-                return
-            }
-            // 不需要压缩
-            // base64
-            if (!config.server) {
-                const reader = new FileReader()
-                reader.onload = (e) => {
-                    component.insertBase64(e.target.result)
-                }
-                reader.readAsDataURL(file)
-                return
-            }
             // 上传服务器
             component.uploadToServer(file)
-        },
-        insertBase64(data) {
-            this.$parent.execCommand(Command.INSERT_IMAGE, data)
         },
         uploadToServer(file) {
             const config = this.$options.module.config
@@ -87,7 +49,7 @@ export default {
             formData.append(config.fieldName, file)
 
             const xhr = new XMLHttpRequest()
-
+            console.log('UPLOADING');
             xhr.onprogress = (e) => {
                 console.log(e);
                 this.upload.status = 'progress'
@@ -109,7 +71,10 @@ export default {
                 try {
                     const url = config.uploadHandler(xhr.responseText)
                     if (url) {
-                        this.$parent.execCommand(Command.INSERT_IMAGE, url)
+                        var video = '<video controls>';
+                        video += '<source src="' + url + '" type="video/' + url.split('.').pop() + '">';
+                        video += '</video>'; 
+                        this.$parent.execCommand(Command.INSERT_VIDEO, video)
                     }
                 } catch (err) {
                     this.setUploadError(err.toString())

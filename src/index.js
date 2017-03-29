@@ -58,7 +58,7 @@ class VueHtml5Editor {
             // specify the config for each module in options by name
             const config = options[module.name]
             module.config = mixin(module.config, config)
-
+            console.log(JSON.stringify(module.config));
             if (module.dashboard) {
                 // $options.module
                 module.dashboard.module = module

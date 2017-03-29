@@ -14,6 +14,7 @@ export default {
     LINE_HEIGHT: 'lineHeight',
     INSERT_HORIZONTAL_RULE: 'insertHorizontalRule',
     INSERT_IMAGE: 'insertImage',
+    INSERT_VIDEO: 'insertHTML',
     CREATE_LINK: 'createLink',
     INSERT_ORDERED_LIST: 'insertOrderedList',
     INSERT_UNORDERED_LIST: 'insertUnorderedList',
